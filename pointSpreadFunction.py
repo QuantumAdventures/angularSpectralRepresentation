@@ -73,7 +73,7 @@ for i in tqdm(range(res)):
         E_xy[1,j,i] = simps(simps(Einf_cl[1]*propagator_xy*np.sin(THETA_CL),theta_cl),phi)
         E_xy[2,j,i] = simps(simps(Einf_cl[2]*propagator_xy*np.sin(THETA_CL),theta_cl),phi)
        
-
+E_xy = E_xy/np.sqrt(simps(simps(np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2,x),y))
 I_xy = np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2
 
 plt.imshow(I_xy, cmap = 'jet')
