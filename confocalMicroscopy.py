@@ -14,7 +14,7 @@ from tqdm import tqdm
 # tweezer parameters
 
 wl = 1550e-9 # [m] tweezer wavelength
-k = 2*np.pi/wl # [m^-1]
+k0 = 2*np.pi/wl # [m^-1]
 NA_tw = 0.8 # numerical aperture of the tweezing lens
 f_tw = 1e-3 # [m] focal length of the tweezing lens
 f_cls = np.linspace(1e-3,20e-3,5) # [m] focal lengths of the collimating lens to be tested
@@ -28,7 +28,7 @@ NA_of = 0.13
 a = 5e-6 # [m] core radius
 l = 0 # fiber mode index l
 m = 1 # fiber mode index m
-V = k*a*NA_of
+V = k0*a*NA_of
 
 '''
 optical fiber mode calculation
@@ -134,7 +134,7 @@ theta_tw = np.linspace(0,np.arcsin(NA_tw),res)
 PHI, THETA_TW = np.meshgrid(phi,theta_tw)
 
 G = [[],[],[]] # dyadic Green function of a dipole located at the origin in the far-field
-a = np.exp(1j*k*f_tw)/(4*np.pi*f_tw) 
+a = np.exp(1j*k0*f_tw)/(4*np.pi*f_tw) 
 
 G[0].append(a*(1-np.cos(PHI)**2*np.sin(THETA_TW)**2))
 G[0].append(a*(-np.sin(PHI)*np.cos(PHI)*np.sin(THETA_TW)**2))
@@ -161,9 +161,9 @@ Einf_tw_nth_tw = Einf_tw[0]*nth_tw[0]+Einf_tw[1]*nth_tw[1]+Einf_tw[2]*nth_tw[2]
 
 overlap = np.zeros(len(f_cls))
 
-for i in tqdm(range(len(f_cls))):
+for k in tqdm(range(len(f_cls))):
 
-    f_cl = f_cls[i]
+    f_cl = f_cls[k]
 
     theta_cl = np.linspace(0,np.arcsin(NA_tw*f_tw/f_cl),res)
     
@@ -184,7 +184,7 @@ for i in tqdm(range(len(f_cls))):
         
         for j in range(res):
     
-            propagator_xy = np.exp(1j*k*(np.sqrt(x[i]**2+y[j]**2)*np.sin(THETA_CL)*np.cos(PHI-np.arctan2(y[j],x[i]))))
+            propagator_xy = np.exp(1j*k0*(np.sqrt(x[i]**2+y[j]**2)*np.sin(THETA_CL)*np.cos(PHI-np.arctan2(y[j],x[i]))))
             
             E_xy[0,j,i] = simps(simps(Einf_cl[0]*propagator_xy*np.sin(THETA_CL),theta_cl),phi)
             E_xy[1,j,i] = simps(simps(Einf_cl[1]*propagator_xy*np.sin(THETA_CL),theta_cl),phi)
@@ -192,6 +192,6 @@ for i in tqdm(range(len(f_cls))):
        
     E_xy = E_xy/np.sqrt(simps(simps(np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2,x),y))
     
-    overlap[i] = np.abs(simps(simps(E_xy[0,:,:]*np.conj(u_fiber),x),y))
+    overlap[k] = np.abs(simps(simps(E_xy[0,:,:]*np.conj(u_fiber),x),y))
 
 plt.plot(f_cls*1000,overlap)
