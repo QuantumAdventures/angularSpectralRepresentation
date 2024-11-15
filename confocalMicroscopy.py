@@ -15,20 +15,24 @@ from tqdm import tqdm
 
 wl = 1550e-9 # [m] tweezer wavelength
 k0 = 2*np.pi/wl # [m^-1]
-NA_tw = 0.8 # numerical aperture of the tweezing lens
-f_tw = 1e-3 # [m] focal length of the tweezing lens
-f_cls = np.linspace(1e-3,20e-3,5) # [m] focal lengths of the collimating lens to be tested
+NA_tw = 0.75 # numerical aperture of the tweezing lens
+f_tw = 0.53e-3 # [m] focal length of the tweezing lens
+f_cls = np.linspace(1e-3,15e-3,40) # [m] focal lengths of the collimating lens to be tested
 res = 100 # resolution of the arrays used in the script
 
 # optical fiber parameters
-
-n1 = 1.45636 # core index
-n2 = 1.44399 # cladding index
-NA_of = 0.13
-a = 5e-6 # [m] core radius
+# https://www.thorlabs.com/drawings/78c5b2f747b6855-E860DD75-01B4-8915-332C7293C949A8DC/SMF-28-J9-SpecSheet.pdf
+n1 = 1.45 # core index
+n2 = 1.44 # cladding index
+NA_of = 0.14
+a = 8.2e-6/2 # [m] core radius
 l = 0 # fiber mode index l
 m = 1 # fiber mode index m
 V = k0*a*NA_of
+
+x = np.linspace(-4*a,4*a,res) # [m] x range in the focus plane of the collimating lens
+y = np.linspace(-4*a,4*a,res) # [m] y range in the focus plane of the collimating lens
+
 
 '''
 optical fiber mode calculation
@@ -82,9 +86,6 @@ assert len(solutions) >= m, "there is no propagating mode for the selected m val
 Y = np.sqrt(V**2-solutions[m-1]**2)
 kt = solutions[m-1]/a
 gamma = Y/a
-
-x = np.linspace(-2*a,2*a,res) # [m] x range in the focus plane of the collimating lens
-y = np.linspace(-2*a,2*a,res) # [m] y range in the focus plane of the collimating lens
 
 X, Y = np.meshgrid(x, y)
 
@@ -194,4 +195,10 @@ for k in tqdm(range(len(f_cls))):
     
     overlap[k] = np.abs(simps(simps(E_xy[0,:,:]*np.conj(u_fiber),x),y))
 
+
 plt.plot(f_cls*1000,overlap)
+plt.xlabel("focal length [mm]")
+plt.ylabel("coupling efficiency")
+plt.grid(alpha = 0.5)
+
+print(f_cls[np.argmax(overlap)]*1000)
