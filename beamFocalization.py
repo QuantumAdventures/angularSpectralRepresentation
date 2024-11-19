@@ -5,17 +5,21 @@ from scipy.integrate import simps
 from scipy.special import hermite
 from scipy.special import eval_genlaguerre
 
-NA = 0.6 #lens numerical aperture
-f0 =  0.6 #filling factor
-wl = 1550e-9
+NA = 0.6 # lens numerical aperture
+f0 =  1 # filling factor
+wl = 1550e-9  # [m] wavelength
 n_medium = 1
 k = 2*np.pi/wl
-res = 200
-intRes = 200
+res = 100
+intRes = 100
+P = 1 # [W] incident power
+
+c = 3e8 # [m/s] speed of light in vacuum
+e0 = 8.85e-12
 
 basis = 'laguerre' #choose 'hermite' or 'laguerre' for the basis
-indices = [[0,2],[0,-2]] #list the indices of the modes present in the beam
-coef = np.array([1,1]) #Amplitude of the modes. Relative phases can be used and the vector don't need to be normalized.
+indices = [[0,0]] #list the indices of the modes present in the beam
+coef = np.array([1]) #Amplitude of the modes. Relative phases can be used and the vector don't need to be normalized.
 
 unit_vector = np.array([1,0,0])
 
@@ -102,41 +106,53 @@ for i in tqdm(range(intRes)):
         E_yz[1,j,i] = simps(simps(E_inf[1]*propagator_yz*np.sin(THETA),theta),phi)
         E_yz[2,j,i] = simps(simps(E_inf[2]*propagator_yz*np.sin(THETA),theta),phi)
 
-I_xy = np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2
-I_xy = I_xy/simps(simps(I_xy,x),y)
+# evaluating the power that got through the lens
+u = np.linspace(0,1/f0,100000)
+Pf = 4*P*simps(np.exp(-2*u)*u,u) #[W] the total power of the beam that got through the tweezing lens
 
-I_xz = np.abs(E_xz[0,:,:])**2 + np.abs(E_xz[1,:,:])**2 + np.abs(E_xz[2,:,:])**2
-I_xz = I_xz/simps(simps(I_xz,x),z)
+# proper normalization constant
+norm_xy = np.sqrt(2*Pf/c/e0)/np.sqrt(simps( simps( np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2 ,x),y))
 
-I_yz = np.abs(E_yz[0,:,:])**2 + np.abs(E_yz[1,:,:])**2 + np.abs(E_yz[2,:,:])**2
-I_yz = I_yz/simps(simps(I_yz,y),z)
+# properly normalized electric field in the XY plane for z = 0
+E_xy[0,:,:] *= norm_xy
+E_xy[1,:,:] *= norm_xy
+E_xy[2,:,:] *= norm_xy
 
-plt.imshow(I_xy, cmap = 'jet')
+# properly normalized electric field in the XZ plane for y = 0
+E_xz[0,:,:] *= norm_xy
+E_xz[1,:,:] *= norm_xy
+E_xz[2,:,:] *= norm_xy
 
-I_x = I_xy[int(intRes/2),:]
-I_x = I_x/np.max(I_x)
+# properly normalized electric field in the YZ plane for x = 0
+E_yz[0,:,:] *= norm_xy
+E_yz[1,:,:] *= norm_xy
+E_yz[2,:,:] *= norm_xy
 
-I_y = I_xy[:,int(intRes/2)]
-I_y = I_y/np.max(I_y)
+# intensities of the field at the XY, XZ, and YZ planes
+I_xy = c*e0*(np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2)/2
+I_xz = c*e0*(np.abs(E_xz[0,:,:])**2 + np.abs(E_xz[1,:,:])**2 + np.abs(E_xz[2,:,:])**2)/2
+I_yz = c*e0*(np.abs(E_yz[0,:,:])**2 + np.abs(E_yz[1,:,:])**2 + np.abs(E_yz[2,:,:])**2)/2
 
-I_z = I_xz[:,int(intRes/2)]
-I_z = I_z/np.max(I_z)
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Times New Roman",
+    'font.size': 10
+})
 
-plt.plot(I_x)
-
-window = 20
-
-coeffs = np.polyfit(x[int(intRes/2)-window:int(intRes/2)+window], I_x[int(intRes/2)-window:int(intRes/2)+window], 4)
-quartic_func = np.poly1d(coeffs)
-
-# Plot
-plt.plot(x,I_x)
-plt.plot(x, quartic_func(x), color='red')
-plt.xlabel('x')
-plt.ylim([0,1.1])
-plt.legend()
+# plotting the intensity at the XY plane
+plt.figure(figsize=(4, 3),constrained_layout=True)
+plt.imshow(I_xy, extent=[x[0]/wl, x[-1]/wl, y[0]/wl, y[-1]/wl], origin='lower', cmap='inferno', aspect='equal')
+plt.xlabel('x [$\lambda$]')
+plt.ylabel('y [$\lambda$]')
 plt.show()
 
+# plotting the intensity at the XY plane along the x and y axis
+plt.figure(figsize=(4, 3),constrained_layout=True)
+plt.plot(x/wl,I_xy[int(res/2),:]/np.max(I_xy), label = 'x axis')
+plt.plot(y/wl,I_xy[:,int(res/2)]/np.max(I_xy),'--' ,label = 'y axis')
+plt.xlabel('distance [$\lambda$]')
+plt.ylabel('normalized intensity [A.U.]')
+plt.legend()
 
 # X, Z = np.meshgrid(x,z)
 
