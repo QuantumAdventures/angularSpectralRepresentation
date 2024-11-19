@@ -15,7 +15,7 @@ n1 = 1.45 # core index
 n2 = np.sqrt(n1**2-NA**2) # cladding index
 wl = 1550e-9 # [m] wavelength
 k = 2*np.pi/wl # [m^-1]
-a = 5e-6 # [m] core radius
+a = 20e-6 # [m] core radius
 l = 0
 m = 1
 V = k*a*NA
@@ -56,10 +56,13 @@ for i in range(len(LHS)-1):
         LHS_plot.append(LHS[i+1])
         X_plot.append(X[i+1])
 
+plt.figure(figsize=(4, 4))
 plt.plot(X_plot,LHS_plot,label = 'LHS')
 plt.plot(X,RHS,label = 'RHS')
 plt.xlim([0,V*1.1])
 plt.ylim([0,RHS[0]*1.5])
+plt.xlabel('X')
+plt.title('l = '+str(l))
 plt.legend()
 
 solutions = solutionFinder(X, LHS, RHS)
@@ -100,9 +103,9 @@ u = u/np.sqrt(simps(simps(np.abs(u)**2,x),y))
 
 mod_u = np.abs(u)**2
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(4, 4))
 plt.imshow(mod_u, extent=[x[0]/a, x[-1]/a, y[0]/a, y[-1]/a], origin='lower', cmap='inferno', aspect='equal')
-plt.colorbar(label='normalized intensity')
+#plt.colorbar(label='normalized intensity')
 
 # Plotting the dashed circle
 circle = plt.Circle((0, 0), 1, color='white', fill=False, linestyle='--', linewidth=2)
@@ -111,4 +114,5 @@ plt.gca().add_artist(circle)
 # Adjusting the plot
 plt.xlabel('x [a]')
 plt.ylabel('y [a]')
+plt.title("l = "+str(l)+", m = "+str(m))
 plt.show()
