@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 from scipy.special import jv, kn
 from scipy.integrate import simps
 
-n1 = 1.45636 # core index
-n2 = 1.44399 # cladding index
+NA = 0.13
+n1 = 1.45 # core index
+n2 = np.sqrt(n1**2-NA**2) # cladding index
 wl = 1550e-9 # [m] wavelength
 k = 2*np.pi/wl # [m^-1]
-NA = 0.13
 a = 5e-6 # [m] core radius
 l = 0
 m = 1
