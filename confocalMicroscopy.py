@@ -22,9 +22,9 @@ res = 100 # resolution of the arrays used in the script
 
 # optical fiber parameters
 # https://www.thorlabs.com/drawings/78c5b2f747b6855-E860DD75-01B4-8915-332C7293C949A8DC/SMF-28-J9-SpecSheet.pdf
+NA_of = 0.14 # optical fiber NA
 n1 = 1.45 # core index
-n2 = 1.44 # cladding index
-NA_of = 0.14
+n2 = np.sqrt(n1**2-NA_of**2) # cladding index
 a = 8.2e-6/2 # [m] core radius
 l = 0 # fiber mode index l
 m = 1 # fiber mode index m
