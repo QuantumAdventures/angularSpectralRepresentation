@@ -12,13 +12,15 @@ n_medium = 1
 k0 = 2*np.pi/wl
 res = 100
 intRes = 100
-P = 1 # [W] power
+P = 1 # [W] incident power
 
 n_particle = 1.42 #https://microparticles.de/eigenschaften
 radius = 156e-9/2 # [m]
 rho_SiO2 = 1850 # [kg/m^3] https://microparticles.de/eigenschaften
 
-c = 3e8
+kb = 1.38e-23 # [J/K] Boltzmann constant
+T0 = 293 # [K] room temperature
+c = 3e8 # [m/s] speed of light in vacuum
 e0 = 8.85e-12
 e_r = (n_particle/n_medium)**2
 V = 4*np.pi*radius**3/3
@@ -83,6 +85,7 @@ def beamConstructor(basis,indices,coef,theta,phi,f0,NA,n_medium):
 f_x = np.zeros(len(f0s))
 f_y = np.zeros(len(f0s))
 f_z = np.zeros(len(f0s))
+potDepth = np.zeros(len(f0s))
 
 for k in tqdm(range(len(f0s))):
     
@@ -152,6 +155,9 @@ for k in tqdm(range(len(f0s))):
     U_y = np.real(alpha_rad)*(np.abs(E_xy[0,:,int(intRes/2)])**2 + np.abs(E_xy[1,:,int(intRes/2)])**2 + np.abs(E_xy[2,:,int(intRes/2)])**2)/4
     U_z = np.real(alpha_rad)*(np.abs(E_xz[0,:,int(intRes/2)])**2 + np.abs(E_xz[1,:,int(intRes/2)])**2 + np.abs(E_xz[2,:,int(intRes/2)])**2)/4
     
+    # potential depth in units of kb*T0
+    potDepth[k] = np.max(U_x/kb/T0)
+    
     # [N] gradient force for each direction
     F_x = np.gradient(U_x,x)
     F_y = np.gradient(U_y,y)
@@ -166,3 +172,31 @@ for k in tqdm(range(len(f0s))):
     f_x[k] = np.sqrt(-k_x/mass_particle)/(2*np.pi)
     f_y[k] = np.sqrt(-k_y/mass_particle)/(2*np.pi)
     f_z[k] = np.sqrt(-k_z/mass_particle)/(2*np.pi)
+    
+    
+plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "Times New Roman",
+    'font.size': 10
+})
+    
+# Create the figure and the primary axis
+fig, ax1 = plt.subplots(figsize=(5, 4),constrained_layout=True)
+
+# Configure the first axis (left)
+ax1.set_xlabel('$f_0$')  # Label for the X-axis
+ax1.set_ylabel('frequency [kHz]', color='k')  # Label for the Y1 axis
+ax1.plot(f0s, f_x/1000, label='freq. x')  # Line for the first axis
+ax1.plot(f0s, f_y/1000, label='freq. y')  # Line for the first axis
+ax1.plot(f0s, f_z/1000, label='freq. z')  # Line for the first axis
+ax1.tick_params(axis='y', labelcolor='k')  # Color of the Y1 ticks
+plt.legend()
+
+# Create a second axis that shares the same X-axis
+ax2 = ax1.twinx()
+
+# Configure the second axis (right)
+ax2.set_ylabel('trap depth [$k_BT$]', color='k')  # Label for the Y2 axis
+ax2.plot(f0s, potDepth, color='red', label='trap depth')  # Line for the second axis
+ax2.tick_params(axis='y', labelcolor='k')  # Color of the Y2 ticks
+plt.legend()
