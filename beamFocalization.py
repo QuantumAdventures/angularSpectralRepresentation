@@ -5,11 +5,14 @@ from scipy.integrate import simps
 from scipy.special import hermite
 from scipy.special import eval_genlaguerre
 
-NA = 0.6 # lens numerical aperture
-f0 =  1 # filling factor
+NA = 0.75 # lens numerical aperture
+f = 0.53e-3 # [m] lens focus
+f0 =  0.6 # filling factor
 wl = 1550e-9  # [m] wavelength
-n_medium = 1
-k = 2*np.pi/wl
+n1 = 1 # refractive index of the medium before the lens
+n2 = 1 # refractive index of the medium after the lens
+w0 = NA*f*f0/n2 # [m] waist of the incident beam
+k = 2*np.pi/wl # modulus of the wavevector
 res = 100
 intRes = 100
 P = 1 # [W] incident power
@@ -28,51 +31,63 @@ y = np.linspace(-2*wl,2*wl,intRes)
 z = np.linspace(-2*wl,2*wl,intRes)
 
 phi = np.linspace(0,2*np.pi,res) #integration limit
-theta = np.linspace(0,np.arcsin(NA/n_medium),res) #integration limit
+theta = np.linspace(0,np.arcsin(NA/n2),res) #integration limit
 
 PHI, THETA = np.meshgrid(phi,theta)
 
-def hermite_inf(n,m,theta,phi,f0,NA,n_medium):
+def hermite_inf(n,m,theta,phi):
     
     H_n = hermite(n, monic = False)
     H_m = hermite(m, monic = False)
-        
-    amplitude = np.exp(-(np.sin(theta)/f0/NA*n_medium)**2)*H_m(np.sqrt(2)*np.cos(PHI)*np.sin(THETA)/f0/NA*n_medium)*H_n(np.sqrt(2)*np.sin(PHI)*np.sin(THETA)/f0/NA*n_medium)
-
-    return amplitude
-
-def laguerre_inf(p,l,theta,phi,f0,NA,n_medium):
-
-    laguerre = eval_genlaguerre(p, abs(l), 2*(np.sin(theta)/f0/NA*n_medium)**2)
+    x = f*np.cos(phi)*np.sin(theta)
+    y = f*np.sin(phi)*np.sin(theta)
+    z = f*np.cos(theta)
+    r = np.sqrt(x**2+y**2)
+    zr = np.pi*w0**2/wl
+    w = w0*np.sqrt(1+(z/zr)**2)
     
-    amplitude = np.exp(-(np.sin(theta)/f0/NA*n_medium)**2)*(np.sqrt(2)*(np.sin(theta)/f0/NA*n_medium))**abs(l)*laguerre
+    E = (1/w)*np.exp(-r**2/w**2)*H_m(np.sqrt(2)*x/w)*H_n(np.sqrt(2)*y/w)
+    
+    return E
 
-    phase =  l*phi
-        
-    return amplitude*np.exp(1j*phase)
+def laguerre_inf(p,l,theta,phi):
 
-def beamConstructor(basis,indices,coef,theta,phi,f0,NA,n_medium):
+    x = f*np.cos(phi)*np.sin(theta)
+    y = f*np.sin(phi)*np.sin(theta)
+    z = f*np.cos(theta)
+    r = np.sqrt(x**2+y**2)
+    zr = np.pi*w0**2/wl
+    w = w0*np.sqrt(1+(z/zr)**2)
+    
+    laguerre = eval_genlaguerre(p, abs(l), 2*r**2/w**2)
+    C = np.sqrt(2*np.math.factorial(p)/(np.pi*np.math.factorial(p+np.abs(l))))/w
+    
+    E = C*(np.sqrt(2)*r/w)**np.abs(l)*np.exp(-r**2/w**2)*laguerre*np.exp(1j*l*phi)
+  
+    return E
 
+def beamConstructor(basis,indices,coef,theta,phi):
+    
     if basis == 'hermite':
             
-        E = coef[0]*hermite_inf(indices[0][0],indices[0][1],theta,phi,f0,NA,n_medium)
+        E = coef[0]*hermite_inf(indices[0][0],indices[0][1],theta,phi)
         
         for mode in range(1,len(indices)):
             
-            E += coef[mode]*hermite_inf(indices[mode][0],indices[mode][1],theta,phi,f0,NA,n_medium)
-                
+            E += coef[mode]*hermite_inf(indices[mode][0],indices[mode][1],theta,phi)
+            
     elif basis == 'laguerre':
         
-        E = coef[0]*laguerre_inf(indices[0][0],indices[0][1],theta,phi,f0,NA,n_medium)
+        E = coef[0]*laguerre_inf(indices[0][0],indices[0][1],theta,phi)
         
         for mode in range(1,len(indices)):
             
-            E += coef[mode]*laguerre_inf(indices[mode][0],indices[mode][1],theta,phi,f0,NA,n_medium)
+            E += coef[mode]*laguerre_inf(indices[mode][0],indices[mode][1],theta,phi)
             
     return E
 
 
-E = beamConstructor(basis,indices,coef,THETA,PHI,f0,NA,n_medium)
+E = beamConstructor(basis,indices,coef,THETA,PHI)
 
 E_inc = [unit_vector[0]*E,unit_vector[1]*E,unit_vector[2]*E]
 E_inc_dot_nphi = -E_inc[0]*np.sin(PHI) + E_inc[1]*np.cos(PHI)
@@ -106,6 +121,7 @@ for i in tqdm(range(intRes)):
         E_yz[1,j,i] = simps(simps(E_inf[1]*propagator_yz*np.sin(THETA),theta),phi)
         E_yz[2,j,i] = simps(simps(E_inf[2]*propagator_yz*np.sin(THETA),theta),phi)
 
+
 # evaluating the power that got through the lens
 u = np.linspace(0,1/f0,100000)
 Pf = 4*P*simps(np.exp(-2*u)*u,u) #[W] the total power of the beam that got through the tweezing lens
@@ -114,24 +130,21 @@ Pf = 4*P*simps(np.exp(-2*u)*u,u) #[W] the total power of the beam that got throu
 norm_xy = np.sqrt(2*Pf/c/e0)/np.sqrt(simps( simps( np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2 ,x),y))
 
 # properly normalized electric field in the XY plane for z = 0
-E_xy[0,:,:] *= norm_xy
-E_xy[1,:,:] *= norm_xy
-E_xy[2,:,:] *= norm_xy
+E_xy *= norm_xy
 
 # properly normalized electric field in the XZ plane for y = 0
-E_xz[0,:,:] *= norm_xy
-E_xz[1,:,:] *= norm_xy
-E_xz[2,:,:] *= norm_xy
+E_xz *= norm_xy
+
 
 # properly normalized electric field in the YZ plane for x = 0
-E_yz[0,:,:] *= norm_xy
-E_yz[1,:,:] *= norm_xy
-E_yz[2,:,:] *= norm_xy
+E_yz *= norm_xy
+
 
 # intensities of the field at the XY, XZ, and YZ planes
 I_xy = c*e0*(np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2)/2
 I_xz = c*e0*(np.abs(E_xz[0,:,:])**2 + np.abs(E_xz[1,:,:])**2 + np.abs(E_xz[2,:,:])**2)/2
 I_yz = c*e0*(np.abs(E_yz[0,:,:])**2 + np.abs(E_yz[1,:,:])**2 + np.abs(E_yz[2,:,:])**2)/2
+
 
 plt.rcParams.update({
     "text.usetex": True,
