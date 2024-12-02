@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from scipy.integrate import simps
+from scipy.integrate import simpson
 from scipy.special import hermite
 from scipy.special import eval_genlaguerre
 
 NA = 0.75 #lens numerical aperture
-f0s =  np.linspace(0.1,1.5,20) #filling factor
+f0s = np.linspace(0.5,1.5,41)
 wl = 1550e-9 # [m] wavelength
 n_medium = 1
 k0 = 2*np.pi/wl
@@ -38,8 +38,14 @@ x = np.linspace(-2*wl,2*wl,intRes)
 y = np.linspace(-2*wl,2*wl,intRes)
 z = np.linspace(-2*wl,2*wl,intRes)
 
+dx = x[1]-x[0]
+dy = y[1]-y[0]
+
 phi = np.linspace(0,2*np.pi,res) #integration limit
 theta = np.linspace(0,np.arcsin(NA/n_medium),res) #integration limit
+
+dtheta = theta[1]-theta[0]
+dphi = phi[1]-phi[0]
 
 PHI, THETA = np.meshgrid(phi,theta)
 
@@ -116,24 +122,25 @@ for k in tqdm(range(len(f0s))):
             propagator_xz = np.exp(1j*k0*(z[j]*np.cos(THETA)+np.sqrt(x[i]**2+0**2)*np.sin(THETA)*np.cos(PHI-np.arctan2(0,x[i]))))
             propagator_yz = np.exp(1j*k0*(z[j]*np.cos(THETA)+np.sqrt(0**2+y[i]**2)*np.sin(THETA)*np.cos(PHI-np.arctan2(y[i],0))))
             
-            E_xy[0,j,i] = simps(simps(E_inf[0]*propagator_xy*np.sin(THETA),theta),phi)
-            E_xy[1,j,i] = simps(simps(E_inf[1]*propagator_xy*np.sin(THETA),theta),phi)
-            E_xy[2,j,i] = simps(simps(E_inf[2]*propagator_xy*np.sin(THETA),theta),phi)
+            E_xy[0,j,i] = simpson(simpson(E_inf[0]*propagator_xy*np.sin(THETA),x=None,dx=dtheta),x=None,dx=dphi)
+            E_xy[1,j,i] = simpson(simpson(E_inf[1]*propagator_xy*np.sin(THETA),x=None,dx=dtheta),x=None,dx=dphi)
+            E_xy[2,j,i] = simpson(simpson(E_inf[2]*propagator_xy*np.sin(THETA),x=None,dx=dtheta),x=None,dx=dphi)
             
-            E_xz[0,j,i] = simps(simps(E_inf[0]*propagator_xz*np.sin(THETA),theta),phi)
-            E_xz[1,j,i] = simps(simps(E_inf[1]*propagator_xz*np.sin(THETA),theta),phi)
-            E_xz[2,j,i] = simps(simps(E_inf[2]*propagator_xz*np.sin(THETA),theta),phi)
+            E_xz[0,j,i] = simpson(simpson(E_inf[0]*propagator_xz*np.sin(THETA),x=None,dx=dtheta),x=None,dx=dphi)
+            E_xz[1,j,i] = simpson(simpson(E_inf[1]*propagator_xz*np.sin(THETA),x=None,dx=dtheta),x=None,dx=dphi)
+            E_xz[2,j,i] = simpson(simpson(E_inf[2]*propagator_xz*np.sin(THETA),x=None,dx=dtheta),x=None,dx=dphi)
             
-            E_yz[0,j,i] = simps(simps(E_inf[0]*propagator_yz*np.sin(THETA),theta),phi)
-            E_yz[1,j,i] = simps(simps(E_inf[1]*propagator_yz*np.sin(THETA),theta),phi)
-            E_yz[2,j,i] = simps(simps(E_inf[2]*propagator_yz*np.sin(THETA),theta),phi)
+            E_yz[0,j,i] = simpson(simpson(E_inf[0]*propagator_yz*np.sin(THETA),x=None,dx=dtheta),x=None,dx=dphi)
+            E_yz[1,j,i] = simpson(simpson(E_inf[1]*propagator_yz*np.sin(THETA),x=None,dx=dtheta),x=None,dx=dphi)
+            E_yz[2,j,i] = simpson(simpson(E_inf[2]*propagator_yz*np.sin(THETA),x=None,dx=dtheta),x=None,dx=dphi)
     
     # evaluating the power that got through the lens
     u = np.linspace(0,1/f0,100000)
-    Pf = 4*P*simps(np.exp(-2*u)*u,u) #[W] the total power of the beam that got through the tweezing lens
+    du = u[1]-u[0]
+    Pf = 4*P*simpson(np.exp(-2*u)*u,x = None,dx = du) #[W] the total power of the beam that got through the tweezing lens
     
     # proper normalization constant
-    norm_xy = np.sqrt(2*Pf/c/e0)/np.sqrt(simps( simps( np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2 ,x),y))
+    norm_xy = np.sqrt(2*Pf/c/e0)/np.sqrt(simpson( simpson( np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2 ,x=None,dx=dx),x=None,dx=dy))
     
     # properly normalized electric field in the XY plane for z = 0
     E_xy[0,:,:] *= norm_xy
