@@ -8,7 +8,7 @@ Created on Thu Nov 14 12:11:29 2024
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.special import jv, kn
-from scipy.integrate import simps
+from scipy.integrate import simpson
 
 NA = 0.13
 n1 = 1.45 # core index
@@ -16,7 +16,7 @@ n2 = np.sqrt(n1**2-NA**2) # cladding index
 wl = 1550e-9 # [m] wavelength
 k = 2*np.pi/wl # [m^-1]
 a = 20e-6 # [m] core radius
-l = 0
+l = 1
 m = 1
 V = k*a*NA
 
@@ -99,7 +99,7 @@ u[mask_inside] = (jv(l, kt * rho[mask_inside]) * np.exp(-1j * l * phi[mask_insid
 u[mask_outside] = (kn(l, gamma * rho[mask_outside]) * np.exp(-1j * l * phi[mask_outside]) / kn(l, gamma * a) +
                    kn(-l, gamma * rho[mask_outside]) * np.exp(1j * l * phi[mask_outside]) / kn(-l, gamma * a))
 
-u = u/np.sqrt(simps(simps(np.abs(u)**2,x),y))
+u = u/np.sqrt(simpson(simpson(np.abs(u)**2,x = None, dx = x[1]-x[0]),x= None, dx = y[1]-y[0]))
 
 mod_u = np.abs(u)**2
 
