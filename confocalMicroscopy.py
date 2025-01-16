@@ -30,6 +30,7 @@ l = 0 # fiber mode index l
 m = 1 # fiber mode index m
 V = k0*a*NA_of
 
+
 x = np.linspace(-4*a,4*a,res) # [m] x range in the focus plane of the collimating lens
 y = np.linspace(-4*a,4*a,res) # [m] y range in the focus plane of the collimating lens
 
@@ -108,7 +109,7 @@ u_fiber[mask_inside] = (jv(l, kt * rho[mask_inside]) * np.exp(-1j * l * phi[mask
 u_fiber[mask_outside] = (kn(l, gamma * rho[mask_outside]) * np.exp(-1j * l * phi[mask_outside]) / kn(l, gamma * a) +
                    kn(-l, gamma * rho[mask_outside]) * np.exp(1j * l * phi[mask_outside]) / kn(-l, gamma * a))
 
-u_fiber = u_fiber/np.sqrt(simps(simps(np.abs(u_fiber)**2,x),y))
+u_fiber = u_fiber/np.sqrt(simpson(simpson(np.abs(u_fiber)**2,dx=x[1]-x[0]),dx=y[1]-y[0]))
 
 # mod_u = np.abs(u_fiber)**2
 
@@ -187,13 +188,13 @@ for k in tqdm(range(len(f_cls))):
     
             propagator_xy = np.exp(1j*k0*(np.sqrt(x[i]**2+y[j]**2)*np.sin(THETA_CL)*np.cos(PHI-np.arctan2(y[j],x[i]))))
             
-            E_xy[0,j,i] = simps(simps(Einf_cl[0]*propagator_xy*np.sin(THETA_CL),theta_cl),phi)
-            E_xy[1,j,i] = simps(simps(Einf_cl[1]*propagator_xy*np.sin(THETA_CL),theta_cl),phi)
-            E_xy[2,j,i] = simps(simps(Einf_cl[2]*propagator_xy*np.sin(THETA_CL),theta_cl),phi)
+            E_xy[0,j,i] = simpson(simpson(Einf_cl[0]*propagator_xy*np.sin(THETA_CL),dx=theta_cl[1]-theta_cl[0]),dx=phi[1]-phi[0])
+            E_xy[1,j,i] = simpson(simpson(Einf_cl[1]*propagator_xy*np.sin(THETA_CL),dx=theta_cl[1]-theta_cl[0]),dx=phi[1]-phi[0])
+            E_xy[2,j,i] = simpson(simpson(Einf_cl[2]*propagator_xy*np.sin(THETA_CL),dx=theta_cl[1]-theta_cl[0]),dx=phi[1]-phi[0])
        
-    E_xy = E_xy/np.sqrt(simps(simps(np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2,x),y))
+    E_xy = E_xy/np.sqrt(simpson(simpson(np.abs(E_xy[0,:,:])**2 + np.abs(E_xy[1,:,:])**2 + np.abs(E_xy[2,:,:])**2,dx=x[1]-x[0]),dx=y[1]-y[0]))
     
-    overlap[k] = np.abs(simps(simps(E_xy[0,:,:]*np.conj(u_fiber),x),y))
+    overlap[k] = np.abs(simpson(simpson(E_xy[0,:,:]*np.conj(u_fiber),dx=x[1]-x[0]),dx=y[1]-y[0]))
 
 
 plt.plot(f_cls*1000,overlap)
